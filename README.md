@@ -1,5 +1,5 @@
 
-:placard:	Summary	StashGifs lets you discover and watch your content in a mobile friendly manner.
+:placard:	Summary	Clips lets you discover and watch your curated marker previews.
 
 :link:	Repository	https://github.com/jweno/stash-clips-source/
 
