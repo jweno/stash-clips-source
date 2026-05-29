@@ -1,0 +1,14 @@
+name: Clips
+description: Mobile-first random scene marker preview feed for Stash.
+version: 0.1.2
+url: https://github.com/jweno/stash-clips-source
+ui:
+  css:
+    - clips.css
+  javascript:
+    - clips.js
+settings:
+  unmuteOnEnter:
+    displayName: Unmute on entering the tab
+    description: Start Clips with audio enabled when the tab opens. Browser autoplay rules may still require a tap.
+    type: BOOLEAN

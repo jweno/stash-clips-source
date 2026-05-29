@@ -1,0 +1,195 @@
+.clips-feed-shell {
+  background: #050505;
+  color: #f7f7f7;
+  height: calc(100dvh - 56px);
+  min-height: 520px;
+  overflow: hidden;
+  position: relative;
+  touch-action: none;
+}
+
+.clips-feed-stage {
+  align-items: center;
+  display: flex;
+  height: 100%;
+  justify-content: center;
+  margin: 0 auto;
+  max-width: 560px;
+  position: relative;
+  width: 100%;
+}
+
+.clips-feed-video {
+  background: #000;
+  height: 100%;
+  object-fit: contain;
+  width: 100%;
+}
+
+.clips-feed-overlay {
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(0, 0, 0, 0.22) 44%,
+    rgba(0, 0, 0, 0.82) 100%
+  );
+  bottom: 0;
+  left: 0;
+  padding: 88px 18px 22px;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+}
+
+.clips-feed-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 0 0 6px;
+  overflow-wrap: anywhere;
+}
+
+.clips-feed-meta {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.88rem;
+  line-height: 1.35;
+  margin: 0;
+}
+
+.clips-feed-scene-link {
+  color: rgba(255, 255, 255, 0.9);
+  display: inline-block;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.35;
+  margin-bottom: 4px;
+  max-width: calc(100% - 60px);
+  overflow-wrap: anywhere;
+  pointer-events: auto;
+  text-decoration: none;
+}
+
+.clips-feed-scene-link:hover {
+  color: #fff;
+  text-decoration: underline;
+}
+
+.clips-feed-score {
+  color: rgba(255, 255, 255, 0.72);
+  font-weight: 700;
+}
+
+.clips-feed-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+}
+
+.clips-feed-play-indicator {
+  align-items: center;
+  backdrop-filter: blur(12px);
+  background: rgba(20, 20, 20, 0.58);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  color: #fff;
+  display: flex;
+  font-size: 2.2rem;
+  height: 72px;
+  justify-content: center;
+  left: 50%;
+  line-height: 1;
+  padding: 0 0 0 5px;
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 72px;
+  z-index: 2;
+}
+
+.clips-feed-action {
+  align-items: center;
+  backdrop-filter: blur(12px);
+  background: rgba(20, 20, 20, 0.64);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  color: #fff;
+  display: flex;
+  font-size: 1.3rem;
+  height: 46px;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+  width: 46px;
+}
+
+.clips-feed-action:disabled {
+  color: rgba(255, 255, 255, 0.34);
+  cursor: not-allowed;
+}
+
+.clips-settings-source {
+  min-width: 16rem;
+  width: 16rem;
+}
+
+.clips-feed-state {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  inset: 0;
+  justify-content: center;
+  padding: 24px;
+  position: absolute;
+  text-align: center;
+  z-index: 3;
+}
+
+.clips-feed-state p {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.95rem;
+  line-height: 1.45;
+  margin: 0;
+  max-width: 340px;
+}
+
+.clips-feed-spinner {
+  animation: clips-feed-spin 0.9s linear infinite;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #fff;
+  border-radius: 999px;
+  height: 34px;
+  width: 34px;
+}
+
+@keyframes clips-feed-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 640px) {
+  .clips-feed-shell {
+    height: calc(100dvh - 48px);
+    min-height: 420px;
+  }
+
+  .clips-feed-stage {
+    max-width: none;
+  }
+
+  .clips-feed-actions {
+    right: 10px;
+  }
+
+  .clips-feed-action {
+    height: 42px;
+    width: 42px;
+  }
+}
