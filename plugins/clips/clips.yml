@@ -1,6 +1,6 @@
 name: Clips
 description: Mobile-first random scene marker preview feed for Stash.
-version: 0.1.2
+version: 0.1.3
 url: https://github.com/jweno/stash-clips-source
 ui:
   css:

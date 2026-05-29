@@ -598,7 +598,7 @@
           wheelLock.current = false;
         }, 520);
 
-        if (event.deltaY < 0) {
+        if (event.deltaY > 0) {
           loadNext();
         } else {
           loadPrevious();
