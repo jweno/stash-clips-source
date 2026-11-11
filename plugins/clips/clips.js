@@ -31,7 +31,6 @@
     historyExclusionWindow: 12,
   };
   const routePath = "/plugin/clips";
-  const maxHistory = 500;
   const recommendationLimit = 20;
   const swipeThreshold = 42;
   const wheelThreshold = 36;
@@ -387,7 +386,11 @@
       return null;
     }
 
-    const recentHistory = windowSize === -1 ? history : history.slice(-windowSize);
+    const effectiveWindow = (windowSize === -1 || windowSize > playable.length)
+      ? playable.length
+      : windowSize;
+
+    const recentHistory = history.slice(-effectiveWindow);
     const recentIds = new Set(recentHistory.map((marker) => marker.id));
     const fresh = playable.filter((marker) => !recentIds.has(marker.id));
     const pool = fresh.length ? fresh : playable;
@@ -396,12 +399,13 @@
 
   function loadRandomMarker(history, windowSize = 12) {
     return graphql(markerWallQuery, { q: null }).then((data) => {
-      const marker = pickFreshMarker(data.markerWall || [], history, windowSize);
+      const markers = data.markerWall || [];
+      const marker = pickFreshMarker(markers, history, windowSize);
       if (!marker) {
         throw new Error("No playable marker streams were returned by Stash.");
       }
 
-      return marker;
+      return { marker, totalCount: markers.length };
     });
   }
 
@@ -469,12 +473,15 @@
               }
 
               const recommendation = recommendationBySceneId[sceneId] || {};
-              return Object.assign({}, marker, {
-                clipsRecommendation: {
-                  source: "hybrid",
-                  score: recommendation.score,
-                },
-              });
+              return {
+                marker: Object.assign({}, marker, {
+                  clipsRecommendation: {
+                    source: "hybrid",
+                    score: recommendation.score,
+                  },
+                }),
+                totalCount: markers.length,
+              };
             })
           );
         }, Promise.reject(new Error("No recommended marker found.")));
@@ -530,14 +537,16 @@
       const sourceSceneId = current && current.scene && current.scene.id;
       const recommendationSource = clipsSettings.recommendationSource;
       const windowSize = clipsSettings.historyExclusionWindow;
+
       const markerPromise = recommendationSource === "hybrid" && sourceSceneId
         ? loadHybridRecommendedMarker(sourceSceneId, history, windowSize).catch(() => loadRandomMarker(history, windowSize))
         : loadRandomMarker(history, windowSize);
 
       markerPromise
-        .then((marker) => {
+        .then(({ marker, totalCount }) => {
           setHistory((value) => {
-            const next = value.concat(marker).slice(-maxHistory);
+            const dynamicCap = Math.max(50, totalCount || 500);
+            const next = value.concat(marker).slice(-dynamicCap);
             setIndex(next.length - 1);
             return next;
           });
