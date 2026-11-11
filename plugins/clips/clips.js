@@ -23,13 +23,14 @@
   const pluginSettingIds = ["clips", "Clips"];
   const recommendationSourceSetting = "recommendationSource";
   const unmuteOnEnterSetting = "unmuteOnEnter";
+  const historyExclusionWindowSetting = "historyExclusionWindow";
   const clipsStoragePrefix = "clips.";
   const defaultClipsSettings = {
     recommendationSource: "random",
     unmuteOnEnter: false,
+    historyExclusionWindow: 12,
   };
   const routePath = "/plugin/clips";
-  const maxHistory = 50;
   const recommendationLimit = 20;
   const swipeThreshold = 42;
   const wheelThreshold = 36;
@@ -258,6 +259,18 @@
 
   function normalizeClipsSettings(settings) {
     const source = settings && typeof settings === "object" ? settings : {};
+    const rawWindow = source[historyExclusionWindowSetting];
+    let windowVal = defaultClipsSettings.historyExclusionWindow;
+
+    if (rawWindow === -1 || rawWindow === "unlimited") {
+      windowVal = -1;
+    } else {
+      const parsed = parseInt(rawWindow, 10);
+      if (!isNaN(parsed) && parsed >= 0) {
+        windowVal = parsed;
+      }
+    }
+
     return {
       recommendationSource: normalizeRecommendationSource(
         source[recommendationSourceSetting] || defaultClipsSettings.recommendationSource
@@ -266,6 +279,7 @@
         typeof source[unmuteOnEnterSetting] === "boolean"
           ? source[unmuteOnEnterSetting]
           : defaultClipsSettings.unmuteOnEnter,
+      historyExclusionWindow: windowVal,
     };
   }
 
@@ -366,26 +380,32 @@
     return {};
   }
 
-  function pickFreshMarker(markers, history) {
+  function pickFreshMarker(markers, history, windowSize = 12) {
     const playable = markers.filter((marker) => Boolean(marker.stream));
     if (!playable.length) {
       return null;
     }
 
-    const recentIds = new Set(history.slice(-12).map((marker) => marker.id));
+    const effectiveWindow = (windowSize === -1 || windowSize > playable.length)
+      ? playable.length
+      : windowSize;
+
+    const recentHistory = history.slice(-effectiveWindow);
+    const recentIds = new Set(recentHistory.map((marker) => marker.id));
     const fresh = playable.filter((marker) => !recentIds.has(marker.id));
     const pool = fresh.length ? fresh : playable;
     return pool[Math.floor(Math.random() * pool.length)];
   }
 
-  function loadRandomMarker(history) {
+  function loadRandomMarker(history, windowSize = 12) {
     return graphql(markerWallQuery, { q: null }).then((data) => {
-      const marker = pickFreshMarker(data.markerWall || [], history);
+      const markers = data.markerWall || [];
+      const marker = pickFreshMarker(markers, history, windowSize);
       if (!marker) {
         throw new Error("No playable marker streams were returned by Stash.");
       }
 
-      return marker;
+      return { marker, totalCount: markers.length };
     });
   }
 
@@ -397,7 +417,7 @@
     });
   }
 
-  function loadHybridRecommendedMarker(sourceSceneId, history) {
+  function loadHybridRecommendedMarker(sourceSceneId, history, windowSize = 12) {
     if (!sourceSceneId) {
       return Promise.reject(new Error("Hybrid Recommendations is not available."));
     }
@@ -447,18 +467,21 @@
         return orderedSceneIds.reduce((promise, sceneId) => {
           return promise.catch(() =>
             loadMarkersForScene(sceneId).then((markers) => {
-              const marker = pickFreshMarker(shuffled(markers), history);
+              const marker = pickFreshMarker(shuffled(markers), history, windowSize);
               if (!marker) {
                 throw new Error("Recommended scene has no playable markers.");
               }
 
               const recommendation = recommendationBySceneId[sceneId] || {};
-              return Object.assign({}, marker, {
-                clipsRecommendation: {
-                  source: "hybrid",
-                  score: recommendation.score,
-                },
-              });
+              return {
+                marker: Object.assign({}, marker, {
+                  clipsRecommendation: {
+                    source: "hybrid",
+                    score: recommendation.score,
+                  },
+                }),
+                totalCount: markers.length,
+              };
             })
           );
         }, Promise.reject(new Error("No recommended marker found.")));
@@ -513,14 +536,17 @@
 
       const sourceSceneId = current && current.scene && current.scene.id;
       const recommendationSource = clipsSettings.recommendationSource;
+      const windowSize = clipsSettings.historyExclusionWindow;
+
       const markerPromise = recommendationSource === "hybrid" && sourceSceneId
-        ? loadHybridRecommendedMarker(sourceSceneId, history).catch(() => loadRandomMarker(history))
-        : loadRandomMarker(history);
+        ? loadHybridRecommendedMarker(sourceSceneId, history, windowSize).catch(() => loadRandomMarker(history, windowSize))
+        : loadRandomMarker(history, windowSize);
 
       markerPromise
-        .then((marker) => {
+        .then(({ marker, totalCount }) => {
           setHistory((value) => {
-            const next = value.concat(marker).slice(-maxHistory);
+            const dynamicCap = Math.max(50, totalCount || 500);
+            const next = value.concat(marker).slice(-dynamicCap);
             setIndex(next.length - 1);
             return next;
           });
@@ -532,7 +558,7 @@
           loadingRef.current = false;
           setLoading(false);
         });
-    }, [clipsSettings.recommendationSource, current, history, index]);
+    }, [clipsSettings.historyExclusionWindow, clipsSettings.recommendationSource, current, history, index]);
 
     const loadPrevious = React.useCallback(() => {
       setIndex((value) => Math.max(0, value - 1));
@@ -818,37 +844,37 @@
       "div",
       { className: "clips-settings-panel" },
       React.createElement(
+        "div",
+        { className: "setting" },
+        React.createElement(
           "div",
-          { className: "setting" },
+          null,
+          React.createElement("h3", null, "Recommendation source"),
           React.createElement(
             "div",
-            null,
-            React.createElement("h3", null, "Recommendation source"),
-            React.createElement(
-              "div",
-              { className: "sub-heading" },
-              "Choose how the next clip is selected. Random is the default."
-            )
-          ),
+            { className: "sub-heading" },
+            "Choose how the next clip is selected. Random is the default."
+          )
+        ),
+        React.createElement(
+          "div",
+          null,
           React.createElement(
-            "div",
-            null,
+            "select",
+            {
+              className: "form-control input-control clips-settings-source",
+              value: recommendationSource,
+              onChange: (event) => saveRecommendationSource(event.currentTarget.value),
+            },
+            React.createElement("option", { value: "random" }, "Random"),
             React.createElement(
-              "select",
-              {
-                className: "form-control input-control clips-settings-source",
-                value: recommendationSource,
-                onChange: (event) => saveRecommendationSource(event.currentTarget.value),
-              },
-              React.createElement("option", { value: "random" }, "Random"),
-              React.createElement(
-                "option",
-                { value: "hybrid", disabled: !hybridAvailable },
-                hybridAvailable ? "Hybrid Recommendations" : "Hybrid Recommendations (not detected)"
-              )
+              "option",
+              { value: "hybrid", disabled: !hybridAvailable },
+              hybridAvailable ? "Hybrid Recommendations" : "Hybrid Recommendations (not detected)"
             )
           )
         )
+      )
     );
   }
 
